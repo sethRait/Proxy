@@ -16,36 +16,71 @@
 #include <unistd.h>
 
 int main(int argc, char *argv[]) {
-	char* remote_host;
-	int remote_port;
-	int proxy_server_port;
 	ProxyParams proxy_params;
 	memset(&proxy_params, 0, sizeof(ProxyParams));
 	if (CheckInput(&proxy_params, argc, argv) != 0) {
 		printf("\nUsage: tcpproxy remote_host remote_port proxy_server_port\n");
 		return 0;
 	}
-	int s = ServerLoop();
-	if (s < 0) {
-		fprintf(stderr, "OH NO!");
-		return 1;
-	}
 	struct sockaddr_in sin;
-	// server loop
-	while (1) {
-		int sinlen = sizeof(sin);
-		int cs = accept(s, (struct sockaddr *)&sin, &sinlen);
-		if (cs < 0) {
-			fprintf(stderr, "OH NO AGAN");
-			return 1;
-		}
-		printf("\nConnection accepted from %s\n", inet_ntoa(sin.sin_addr));
-	}
+	memset(&sin, 0, sizeof(sin));
+	// Connect to remote server
+	int remote_sock = ConnectRemote(proxy_params.remote_host,
+								    proxy_params.remote_port, &sin);
+	// Wait for and connect to incoming connections
+	int client_sock = SetupListen(proxy_params.proxy_server_port);
+	HandleConnection(client_sock, remote_sock);
 	return 0;
 }
 
-int ServerLoop() {
-	int port = 12321;
+int ConnectClient(int s) {
+	struct sockaddr_in sin;
+	memset(&sin, 0, sizeof(sin));
+	int sinlen = sizeof(sin);
+	int client_sock = accept(s, (struct sockaddr *)&sin, &sinlen);
+	if (client_sock < 0) {
+		return -1;
+	}
+	printf("\nClient connection accepted from %s\n", inet_ntoa(sin.sin_addr));
+	return client_sock;
+}
+
+int ConnectRemote(char *host, int port, struct sockaddr_in *sa) {
+	struct hostent *h;
+	int s;
+
+	h = gethostbyname(host);
+	if (!h || h->h_length != sizeof(struct in_addr)) {
+		fprintf(stderr, "%s: no such host\n", host);
+		return -1;
+	}
+
+	s = socket(AF_INET, SOCK_STREAM, 0);
+	memset(sa, 0, sizeof(sa));
+	sa->sin_family = AF_INET;
+	sa->sin_port = htons(0);	// OS can choose port
+	sa->sin_addr.s_addr = htonl(INADDR_ANY);	// OS can choose IP
+	if (bind(s, (struct sockaddr *)sa, sizeof(*sa)) < 0) {
+		perror("bind");
+		close(s);
+		return -1;
+	}
+
+	// Set the destination address
+	sa->sin_port = htons(port);
+	sa->sin_addr = *(struct in_addr *)h->h_addr;
+
+	// Connect to the server
+	if (connect(s, (struct sockaddr *)sa, sizeof(*sa)) < 0) {
+		perror(host);
+		close(s);
+		return -1;
+	}
+	printf("\nConnected to remote host %s", host);
+	return s;
+}
+
+int SetupListen(int port) {
 	int s, n;
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
@@ -76,5 +111,5 @@ int ServerLoop() {
 		close(s);
 		return -1;
 	}
-	return s;
+	return ConnectClient(s);
 }
