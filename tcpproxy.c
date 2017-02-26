@@ -15,6 +15,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#define BUFFER_SIZE 256
+
 int main(int argc, char *argv[]) {
 	ProxyParams proxy_params;
 	memset(&proxy_params, 0, sizeof(ProxyParams));
@@ -31,6 +33,26 @@ int main(int argc, char *argv[]) {
 	int client_sock = SetupListen(proxy_params.proxy_server_port);
 	HandleConnection(client_sock, remote_sock);
 	return 0;
+}
+
+void HandleConnection(int client, int remote) {
+	char buf[BUFFER_SIZE] = {'0'};
+	int buf_pos = 0, num_read = 0;
+	num_read = read(client, buf, BUFFER_SIZE);	// Read request from client
+	if (num_read < 0) {
+		fprintf(stderr, "\nError reading from socket\n");
+		return;
+	}
+	printf("\nread: %s", buf);
+	write(remote, buf, num_read);	// Write request from client to remote
+	memset(buf, 0, BUFFER_SIZE);	
+	num_read = read(remote, buf, BUFFER_SIZE);  // Read response from remote
+	if (num_read < 0) {
+		fprintf(stderr, "\nError reading from remote socket\n");
+		return;
+	}
+	printf("\nremote returned: %s", buf);
+	return;
 }
 
 int ConnectClient(int s) {

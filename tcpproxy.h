@@ -19,4 +19,4 @@ int ConnectClient(int s);
 int ConnectRemote(char *host, int port, struct sockaddr_in *sa);
 
 // Handle reads and writes between two connected sockets
-int HandleConnection(int client_sock, int remote_sock);
+void HandleConnection(int client_sock, int remote_sock);
