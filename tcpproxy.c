@@ -46,7 +46,7 @@ void HandleConnection(int client, int remote) {
 	printf("\nread: %s", buf);
 	write(remote, buf, num_read);	// Write request from client to remote
 	memset(buf, 0, BUFFER_SIZE);	
-	num_read = read(remote, buf, BUFFER_SIZE);  // Read response from remote
+	num_read = read(remote, buf, BUFFER_SIZE - 1);  // Read response from remote
 	if (num_read < 0) {
 		fprintf(stderr, "\nError reading from remote socket\n");
 		return;
