@@ -33,14 +33,16 @@ void ConnectionLoop(ProxyParams *proxy_params) {
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
 	// Connect to remote server
-	int remote_sock = ConnectRemote(proxy_params->remote_host,
-									proxy_params->remote_port, &sin);
-	int client_sock;
+	int proxy_sock = SetupListen(proxy_params->proxy_server_port);
+	int remote_sock, client_sock;
 	while (1) {
+		remote_sock = ConnectRemote(proxy_params->remote_host,
+								   proxy_params->remote_port, &sin);
+		client_sock = ConnectClient(proxy_sock);
 		// Connect to remote client
-		client_sock = SetupListen(proxy_params->proxy_server_port);
 		HandleConnection(client_sock, remote_sock);
 		close(client_sock);
+		close(remote_sock);
 	}
 }
 
@@ -93,12 +95,11 @@ void TransferData(struct pollfd *fds, char *to_server, char *to_client) {
 			fprintf(stderr, "Client disconnected\n");
 			return;
 		}
-		printf("to_server: %d\nto_client: %d\n", server_offset, client_offset);
-		usleep(250000);
+		//printf("to_server: %d\nto_client: %d\n", server_offset, client_offset);
+		usleep(50000);
 		if (server_offset == 0 && client_offset == 0 && msg_recieved == 1) {
-			char end[] = "\r\n\r\n";
-			write(fds[1].fd, end, 4);
 			msg_recieved = 0;
+			return;
 		}
 	}
 }

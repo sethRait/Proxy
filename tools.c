@@ -97,5 +97,5 @@ int SetupListen(int port) {
 		close(s);
 		return -1;
 	}
-	return ConnectClient(s);
+	return s;
 }
