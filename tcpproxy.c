@@ -14,6 +14,7 @@
 #include <inttypes.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <poll.h>
 
 #define BUFFER_SIZE 256
 
@@ -24,35 +25,66 @@ int main(int argc, char *argv[]) {
 		printf("\nUsage: tcpproxy remote_host remote_port proxy_server_port\n");
 		return 0;
 	}
-	struct sockaddr_in sin;
-	memset(&sin, 0, sizeof(sin));
-	// Connect to remote server
-	int remote_sock = ConnectRemote(proxy_params.remote_host,
-								    proxy_params.remote_port, &sin);
-	// Wait for and connect to incoming connections
-	int client_sock = SetupListen(proxy_params.proxy_server_port);
-	HandleConnection(client_sock, remote_sock);
+	ConnectionLoop(&proxy_params);
 	return 0;
 }
 
-void HandleConnection(int client, int remote) {
-	char buf[BUFFER_SIZE] = {'0'};
-	int buf_pos = 0, num_read = 0;
-	num_read = read(client, buf, BUFFER_SIZE);	// Read request from client
-	if (num_read < 0) {
-		fprintf(stderr, "\nError reading from socket\n");
-		return;
+void ConnectionLoop(ProxyParams *proxy_params) {
+	struct sockaddr_in sin;
+	memset(&sin, 0, sizeof(sin));
+	// Connect to remote server
+	int remote_sock = ConnectRemote(proxy_params->remote_host,
+									proxy_params->remote_port, &sin);
+	int client_sock;
+	while (1) {
+		// Connect to remote client
+		client_sock = SetupListen(proxy_params->proxy_server_port);
+		HandleConnection(client_sock, remote_sock);
+		close(client_sock);
 	}
-	printf("\nread: %s", buf);
-	write(remote, buf, num_read);	// Write request from client to remote
-	memset(buf, 0, BUFFER_SIZE);	
-	num_read = read(remote, buf, BUFFER_SIZE - 1);  // Read response from remote
-	if (num_read < 0) {
-		fprintf(stderr, "\nError reading from remote socket\n");
-		return;
+}
+
+void HandleConnection(int client, int server) {
+	char to_server[BUFFER_SIZE] = {'\0'};
+	char to_client[BUFFER_SIZE] = {'\0'};
+	struct pollfd fds[2];
+	memset(fds, 0, 2 * sizeof(struct pollfd));
+	fds[0].fd = client;
+	fds[0].events |= (POLLIN | POLLOUT);
+	fds[1].events |= (POLLIN | POLLOUT);
+	fds[1].fd = server;
+	int connection_status;
+	TransferData(fds, to_server, to_client);
+}
+
+void TransferData(struct pollfd *fds, char *to_server, char *to_client) {
+	int server_offset = 0;
+	int client_offset = 0;
+	while(1) {
+		poll(fds, 2, -1);
+		// If there is data to read on the client socket and room in the buffer
+		if (fds[0].revents & POLLIN && server_offset < BUFFER_SIZE) {
+			server_offset += read(fds[0].fd, to_server + server_offset, 
+						 	  	  BUFFER_SIZE - server_offset - 1);
+		}
+		// If the client can accept data and there is data to be sent
+		while (fds[0].revents & POLLOUT && client_offset > 0) {
+			client_offset -= write(fds[0].fd, to_client, client_offset);
+		}
+		// If there is data to read on the server socket and room in the buffer
+		if (fds[1].revents & POLLIN && client_offset < BUFFER_SIZE) {
+			client_offset += read(fds[1].fd, to_client + client_offset,
+						  	  	  BUFFER_SIZE - client_offset - 1);
+		}
+		// If the server can accept data and there is data to be sent
+		while (fds[1].revents & POLLOUT && server_offset > 0) {
+			server_offset -= write(fds[1].fd, to_server, server_offset);
+		}
+		if (server_offset < 0 || client_offset < 0) {
+			printf("Client disconnected\n");
+			return;
+		}
 	}
-	printf("\nremote returned: %s", buf);
-	return;
 }
 
 int ConnectClient(int s) {
@@ -63,7 +95,6 @@ int ConnectClient(int s) {
 	if (client_sock < 0) {
 		return -1;
 	}
-	printf("\nClient connection accepted from %s\n", inet_ntoa(sin.sin_addr));
 	return client_sock;
 }
 
@@ -98,7 +129,6 @@ int ConnectRemote(char *host, int port, struct sockaddr_in *sa) {
 		close(s);
 		return -1;
 	}
-	printf("\nConnected to remote host %s", host);
 	return s;
 }
 
