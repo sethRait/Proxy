@@ -1,6 +1,5 @@
-#include <poll.h>
 #include <netinet/in.h>
-#include <sys/socket.h>
+#include <poll.h>
 
 typedef struct ProxyParams {
 	char* remote_host;

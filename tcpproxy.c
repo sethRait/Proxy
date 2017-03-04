@@ -1,22 +1,15 @@
 #include "tcpproxy.h"
 #include "tools.h"
 
-#include <arpa/inet.h>
 #include <errno.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netdb.h>
-#include <inttypes.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <poll.h>
 
-#define BUFFER_SIZE 4096
+#define BUF_LEN 4096
 
 int main(int argc, char *argv[]) {
 	ProxyParams proxy_params;
@@ -47,8 +40,8 @@ void ConnectionLoop(ProxyParams *proxy_params) {
 }
 
 void HandleConnection(int client, int server) {
-	char to_server[BUFFER_SIZE] = {'\0'};
-	char to_client[BUFFER_SIZE] = {'\0'};
+	char to_server[BUF_LEN] = {'\0'};
+	char to_client[BUF_LEN] = {'\0'};
 	struct pollfd fds[2];
 	memset(fds, 0, 2 * sizeof(struct pollfd));
 	fds[0].fd = client;
@@ -59,46 +52,33 @@ void HandleConnection(int client, int server) {
 }
 
 void TransferData(struct pollfd *fds, char *to_server, char *to_client) {
-	int server_offset = 0;
-	int client_offset = 0;
-	int msg_sent = 0;
-	int msg_recieved = 0;
+	int serv_count = 0;
+	int client_count = 0;
 	while(1) {
 		poll(fds, 2, -1);
 		// If there is data to read on the client socket and room in the buffer
-		if (fds[0].revents & POLLIN && server_offset < BUFFER_SIZE - 1) {
-			server_offset += read(fds[0].fd, to_server + server_offset, 
-						 	  	  BUFFER_SIZE - server_offset - 1);
+		if (fds[0].revents & POLLIN && serv_count < BUF_LEN - 1) {
+			serv_count += read(fds[0].fd, to_server + serv_count, 
+						 	   BUF_LEN - serv_count - 1);
 		}
 		// If the client can accept data and there is data to be sent
-		while (fds[0].revents & POLLOUT && client_offset > 0) {
-			client_offset -= write(fds[0].fd, to_client, client_offset);
-			if (client_offset == 0) {
-				memset(to_client, '\0', BUFFER_SIZE);
-				msg_recieved = 1;
-			}
+		while (fds[0].revents & POLLOUT && client_count > 0) {
+			client_count -= write(fds[0].fd, to_client, client_count);
 		}
 		// If there is data to read on the server socket and room in the buffer
-		if (fds[1].revents & POLLIN && client_offset < BUFFER_SIZE - 1) {
-			client_offset += read(fds[1].fd, to_client + client_offset,
-						  	  	  BUFFER_SIZE - client_offset - 1);
+		if (fds[1].revents & POLLIN && client_count < BUF_LEN - 1) {
+			client_count += read(fds[1].fd, to_client + client_count,
+						  	  	 BUF_LEN - client_count - 1);
 		}
 		// If the server can accept data and there is data to be sent
-		while (fds[1].revents & POLLOUT && server_offset > 0) {
-			server_offset -= write(fds[1].fd, to_server, server_offset);
-			if (server_offset == 0) {
-				memset(to_server, '\0', BUFFER_SIZE);
-				msg_sent = 1;
-			}
+		while (fds[1].revents & POLLOUT && serv_count > 0) {
+			serv_count -= write(fds[1].fd, to_server, serv_count);
 		}
-		if (server_offset < 0 || client_offset < 0) {
-			fprintf(stderr, "Client disconnected\n");
+		if (serv_count < 0 || client_count < 0) {
+			fprintf(stderr, "Client disconnected with status: %d\n", errno);
 			return;
 		}
-		//printf("to_server: %d\nto_client: %d\n", server_offset, client_offset);
-		usleep(50000);
-		if (server_offset == 0 && client_offset == 0 && msg_recieved == 1) {
-			msg_recieved = 0;
+		if (serv_count == 0 && client_count == 0 && fds[1].revents & ~POLLOUT) {
 			return;
 		}
 	}

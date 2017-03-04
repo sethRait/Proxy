@@ -1,12 +1,13 @@
 #include "tcpproxy.h"
 
-#include <string.h>
-#include <netdb.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <unistd.h>
-#include <stdlib.h>
+#include <fcntl.h>
+#include <netdb.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 int CheckInput(ProxyParams* proxy_params, int argc, char *argv[]) {
 	if (argc != 4) {
 		return 1;
