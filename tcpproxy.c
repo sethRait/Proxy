@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define BUF_LEN 4096
+#define BUF_LEN 16384 
 
 int main(int argc, char *argv[]) {
 	ProxyParams proxy_params;
@@ -31,6 +31,8 @@ void ConnectionLoop(ProxyParams *proxy_params) {
 	while (1) {
 		remote_sock = ConnectRemote(proxy_params->remote_host,
 								   proxy_params->remote_port, &sin);
+		make_async(remote_sock);
+		make_async(client_sock);
 		client_sock = ConnectClient(proxy_sock);
 		// Connect to remote client
 		HandleConnection(client_sock, remote_sock);

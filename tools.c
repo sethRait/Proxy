@@ -8,6 +8,17 @@
 #include <string.h>
 #include <unistd.h>
 
+int make_async(int s) {
+    int n;
+
+    if((n = fcntl(s, F_GETFL)) == -1 || fcntl(s, F_SETFL, n | O_NONBLOCK) == -1)
+		return -1;
+    n = 1;
+    if(setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &n, sizeof(n)) == -1)
+		return -1;
+    return 0;
+}
+
 int CheckInput(ProxyParams* proxy_params, int argc, char *argv[]) {
 	if (argc != 4) {
 		return 1;

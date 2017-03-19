@@ -1,3 +1,5 @@
+// Makes a socket ready for asynchronous IO.  Returns -1 on error.
+int make_async(int s);
 // Gather and check commandline arguments to the program.  Returns 0 on success,
 // returns 1 otherwise.
 int CheckInput(ProxyParams* proxy_params, int argc, char *argv[]);
