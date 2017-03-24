@@ -1,2 +1,6 @@
+tcpproxy
+webproxy
+http-parser
 *.out
 *.o
+*.h
