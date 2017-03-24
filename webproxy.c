@@ -57,12 +57,19 @@ void HandleConnection(int client, int server) {
 void TransferData(struct pollfd *fds, char *to_server, char *to_client) {
 	int serv_count = 0;
 	int client_count = 0;
+	http_parser *parser = malloc(sizeof(http_parser));
+	http_parser_init(parser, HTTP_REQUEST);
 	while(1) {
 		poll(fds, 2, -1);
 		// If there is data to read on the client socket and room in the buffer
 		if (fds[0].revents & POLLIN && serv_count < BUF_LEN - 1) {
 			serv_count += read(fds[0].fd, to_server + serv_count, 
 						 	   BUF_LEN - serv_count - 1);
+			int nparsed = http_parser_execute(parser, &settings, buf_data(buf), serv_count);
+			if (nparsed != serv_count) {
+				fprintf(stderr, "OHNO\n");
+				return;
+			}
 		}
 		// If the client can accept data and there is data to be sent
 		while (fds[0].revents & POLLOUT && client_count > 0) {
