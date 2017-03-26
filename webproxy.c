@@ -1,6 +1,6 @@
 #include "http_parser.h"
-#include "tcpproxy.h"
 #include "tools.h"
+#include "webproxy.h"
 
 #include <errno.h>
 #include <poll.h>
@@ -11,34 +11,33 @@
 #include <unistd.h>
 
 #define BUF_LEN 16384 
+int proxy_server_port;
 
 int main(int argc, char *argv[]) {
-	ProxyParams proxy_params;
-	memset(&proxy_params, 0, sizeof(ProxyParams));
-	if (CheckInput(&proxy_params, argc, argv) != 0) {
-		printf("\nUsage: tcpproxy remote_host remote_port proxy_server_port\n");
+	if ((CheckInput(argc, argv)) < 0) {
+		printf("Usage: webproxy proxy_server_port\n");
 		return 0;
 	}
-	ConnectionLoop(&proxy_params);
+	ConnectionLoop();
 	return 0;
 }
 
-void ConnectionLoop(ProxyParams *proxy_params) {
+void ConnectionLoop() {
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
 	// Connect to remote server
-	int proxy_sock = SetupListen(proxy_params->proxy_server_port);
+	int proxy_sock = SetupListen(proxy_server_port);
 	int remote_sock, client_sock;
 	while (1) {
-		remote_sock = ConnectRemote(proxy_params->remote_host,
-								   proxy_params->remote_port, &sin);
-		make_async(remote_sock);
+		//remote_sock = ConnectRemote(proxy_params->remote_host,
+		//						   proxy_params->remote_port, &sin);
+		//make_async(remote_sock);
 		make_async(client_sock);
 		client_sock = ConnectClient(proxy_sock);
 		// Connect to remote client
-		HandleConnection(client_sock, remote_sock);
+		//HandleConnection(client_sock, remote_sock);
 		close(client_sock);
-		close(remote_sock);
+		//close(remote_sock);
 	}
 }
 
@@ -65,7 +64,8 @@ void TransferData(struct pollfd *fds, char *to_server, char *to_client) {
 		if (fds[0].revents & POLLIN && serv_count < BUF_LEN - 1) {
 			serv_count += read(fds[0].fd, to_server + serv_count, 
 						 	   BUF_LEN - serv_count - 1);
-			int nparsed = http_parser_execute(parser, &settings, buf_data(buf), serv_count);
+			int nparsed = http_parser_execute(parser, &settings, to_server,
+										      serv_count);
 			if (nparsed != serv_count) {
 				fprintf(stderr, "OHNO\n");
 				return;

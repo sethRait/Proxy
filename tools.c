@@ -1,5 +1,7 @@
-#include "tcpproxy.h"
+#include "webproxy.h"
+#include "tools.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -10,7 +12,6 @@
 
 int make_async(int s) {
     int n;
-
     if((n = fcntl(s, F_GETFL)) == -1 || fcntl(s, F_SETFL, n | O_NONBLOCK) == -1)
 		return -1;
     n = 1;
@@ -19,24 +20,22 @@ int make_async(int s) {
     return 0;
 }
 
-int CheckInput(ProxyParams* proxy_params, int argc, char *argv[]) {
-	if (argc != 4) {
-		return 1;
+int CheckInput(int argc, char *argv[]) {
+	if (argc != 2) {
+		return -1;
 	}
-	proxy_params->remote_host = argv[1];
-	if ((proxy_params->remote_port = atoi(argv[2])) == 0) {
-		return 1;
+	if (!(atoi(argv[1]) <= 65535 && atoi(argv[1]) > 1024)) {
+		fprintf(stderr, "Port must be between 1025 and 65535\n");
+		return -1;
 	}
-	if ((proxy_params->proxy_server_port = atoi(argv[3])) == 0) {
-		return 1;
-	}
-	return 0;
+	proxy_server_port = atoi(argv[1]);
+	return proxy_server_port;
 }
 
 int ConnectClient(int s) {
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
-	int sinlen = sizeof(sin);
+	socklen_t sinlen = sizeof(sin);
 	int client_sock = accept(s, (struct sockaddr *)&sin, &sinlen);
 	if (client_sock < 0) {
 		return -1;
@@ -55,7 +54,7 @@ int ConnectRemote(char *host, int port, struct sockaddr_in *sa) {
 	}
 
 	s = socket(AF_INET, SOCK_STREAM, 0);
-	memset(sa, 0, sizeof(sa));
+	memset(sa, 0, sizeof(&sa));
 	sa->sin_family = AF_INET;
 	sa->sin_port = htons(0);	// OS can choose port
 	sa->sin_addr.s_addr = htonl(INADDR_ANY);	// OS can choose IP

@@ -1,10 +1,14 @@
 #include <stdio.h>
+#include "http_parser.h"
+
+extern int proxy_server_port;
 
 // Makes a socket ready for asynchronous IO.  Returns -1 on error.
 int make_async(int s);
-// Gather and check commandline arguments to the program.  Returns 0 on success,
-// returns 1 otherwise.
-int CheckInput(ProxyParams* proxy_params, int argc, char *argv[]);
+
+// Gather and check commandline arguments to the program.  Returns port number
+// on success and -1 otherwise.
+int CheckInput(int argc, char *argv[]);
 
 // Helper method which sets up a socket on the given port to listen for incoming
 //connections.
