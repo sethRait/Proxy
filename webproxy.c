@@ -34,11 +34,29 @@ void ConnectionLoop() {
 		//make_async(remote_sock);
 		make_async(client_sock);
 		client_sock = ConnectClient(proxy_sock);
+		// TODO: write this function:
+		ReadRequest(client_sock);
 		// Connect to remote client
 		//HandleConnection(client_sock, remote_sock);
 		close(client_sock);
 		//close(remote_sock);
 	}
+}
+
+void ReadRequest(int client_sock) {
+	char buffer[BUF_LEN] = {'\0'};
+	struct pollfd fds[2];
+	parse_info parsed;
+	memset(parsed, 0, sizeof(parse_info));
+	memset(fds, 0, 2 * sizeof(struct pollfd));
+	fds[0].fd = client_sock;
+	fds[0].events |= (POLLIN);
+	http_parser *parser = malloc(sizeof(http_parser));
+	http_parser_init(parser, HTTP_REQUEST);
+	poll(fds, 1, -1);
+	int nread = read(fds[0].fd, buffer, BUF_LEN - 1);
+	parser->BUF = parsed;
+	int nparsed = http_parser_execute(parser, &settings, buffer, nread);
 }
 
 void HandleConnection(int client, int server) {

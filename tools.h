@@ -3,6 +3,14 @@
 
 extern int proxy_server_port;
 
+typedef struct {
+	char ** buf;
+	char ** domain;
+	int fqdn_length;
+	int irl_offset;
+	char ** headers;
+}parse_info;
+
 // Makes a socket ready for asynchronous IO.  Returns -1 on error.
 int make_async(int s);
 
@@ -31,7 +39,28 @@ static int message_complete_cb(http_parser *parser) {
 	return 0;
 }
 
+// Set the url field of the parser struct
 static int url_cb(http_parser *parser, const char *s, size_t length) {
+	parser->BUF.fqdn_length = (int)length;
+	parser->BUF.domain = s;
+	if ((parser->BUF.rl_offset = GetOffset(s, length)) < 0) {
+		return -1;
+	}
+	return 0;
+}
+	
+// Helper method for finding the offset in the domain string of the filepath
+static int GetOffset(char *s, size_t length) {
+	int count = 0;
+	for (int i = 0; i < length; i++) {
+		if (s + i == '/') {	// Count the '/' occurrences.
+			count++;
+		}
+		if (count == 3) {	// the first char after 3rd '/' starts the path
+			return i;
+		}
+		return -1;	// malformed URL
+	}
 	printf("url: %.*s\n", (int)length, s);
 	return 0;
 }
