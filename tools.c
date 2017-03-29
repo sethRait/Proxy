@@ -43,10 +43,11 @@ int ConnectClient(int s) {
 	return client_sock;
 }
 
-int ConnectRemote(char *host, int port, struct sockaddr_in *sa) {
+int ConnectRemote(parse_info *info, struct sockaddr_in *sa) {
 	struct hostent *h;
 	int s;
-
+	char *host = malloc(info->irl_offset);
+	strncpy(host, info->domain, info->fqdn_length);
 	h = gethostbyname(host);
 	if (!h || h->h_length != sizeof(struct in_addr)) {
 		fprintf(stderr, "%s: no such host\n", host);
@@ -54,7 +55,6 @@ int ConnectRemote(char *host, int port, struct sockaddr_in *sa) {
 	}
 
 	s = socket(AF_INET, SOCK_STREAM, 0);
-	memset(sa, 0, sizeof(&sa));
 	sa->sin_family = AF_INET;
 	sa->sin_port = htons(0);	// OS can choose port
 	sa->sin_addr.s_addr = htonl(INADDR_ANY);	// OS can choose IP
@@ -65,7 +65,7 @@ int ConnectRemote(char *host, int port, struct sockaddr_in *sa) {
 	}
 
 	// Set the destination address
-	sa->sin_port = htons(port);
+	sa->sin_port = htons(80);	// For now, just use port 80 for HTTP
 	sa->sin_addr = *(struct in_addr *)h->h_addr;
 
 	// Connect to the server

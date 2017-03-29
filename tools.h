@@ -1,14 +1,16 @@
+#include <netinet/ip.h>
 #include <stdio.h>
 #include "http_parser.h"
 
 extern int proxy_server_port;
 
 typedef struct {
-	char ** buf;
-	char ** domain;
+	const char * domain;
 	int fqdn_length;
 	int irl_offset;
 	char ** headers;
+	int content_length_exists;
+	int content_length;
 }parse_info;
 
 // Makes a socket ready for asynchronous IO.  Returns -1 on error.
@@ -27,7 +29,7 @@ int ConnectClient(int s);
 
 // Connects a remote server to the proxy server and returns the remote server's
 // socket fd
-int ConnectRemote(char *host, int port, struct sockaddr_in *sa);
+int ConnectRemote(parse_info *info, struct sockaddr_in *sa);
 
 static int message_begin_cb(http_parser *parser) {
 	printf("message begin\n");
@@ -39,21 +41,11 @@ static int message_complete_cb(http_parser *parser) {
 	return 0;
 }
 
-// Set the url field of the parser struct
-static int url_cb(http_parser *parser, const char *s, size_t length) {
-	parser->BUF.fqdn_length = (int)length;
-	parser->BUF.domain = s;
-	if ((parser->BUF.rl_offset = GetOffset(s, length)) < 0) {
-		return -1;
-	}
-	return 0;
-}
-	
 // Helper method for finding the offset in the domain string of the filepath
-static int GetOffset(char *s, size_t length) {
+int GetOffset(const char *s, size_t length) {
 	int count = 0;
 	for (int i = 0; i < length; i++) {
-		if (s + i == '/') {	// Count the '/' occurrences.
+		if (s[i] == '/') {	// Count the '/' occurrences.
 			count++;
 		}
 		if (count == 3) {	// the first char after 3rd '/' starts the path
@@ -62,6 +54,17 @@ static int GetOffset(char *s, size_t length) {
 		return -1;	// malformed URL
 	}
 	printf("url: %.*s\n", (int)length, s);
+	return 0;
+}
+	
+// Set the url field of the parser struct
+static int url_cb(http_parser *parser, const char *s, size_t length) {
+	parse_info *parse_struct = ((parse_info *)(parser->data));
+	parse_struct->fqdn_length = (int)length;
+	parse_struct->domain = s;
+	if ((parse_struct->irl_offset = GetOffset(s, length)) < 0) {
+		return -1;
+	}
 	return 0;
 }
 
