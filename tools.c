@@ -65,7 +65,7 @@ int ConnectRemote(parse_info *info, struct sockaddr_in *sa) {
 	}
 
 	// Set the destination address
-	sa->sin_port = htons(80);	// For now, just use port 80 for HTTP
+	sa->sin_port = htons(info->port);
 	sa->sin_addr = *(struct in_addr *)h->h_addr;
 
 	// Connect to the server
@@ -111,7 +111,7 @@ int SetupListen(int port) {
 	return s;
 }
 
-void GetOffsets(parse_info *parse_struct, const char *s, size_t length) {
+void SetOffsets(parse_info *parse_struct, const char *s, size_t length) {
 	if (strncmp(s, "https://", 8) == 0) {
 		parse_struct->protocol_offset = 8;
 	}
@@ -125,4 +125,17 @@ void GetOffsets(parse_info *parse_struct, const char *s, size_t length) {
 		}
 	}
 	parse_struct->host = s + parse_struct->protocol_offset;
+}
+
+void SetPort(parse_info *parse_struct, const char *s, size_t length) {
+	parse_struct->port = 80;	// Default to port 80 for HTTP.
+	if (parse_struct->protocol_offset = 8) {
+		parse_struct->port = 443;	// If HTTPS, use 443 unless specified.
+	}
+	for (int i = length; i > length - 6; i--) {
+		if (s[i] == ':') {
+			parse_struct->port = atoi(&(s[i + 1]));
+			break;
+		}
+	}
 }

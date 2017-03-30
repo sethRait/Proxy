@@ -23,7 +23,6 @@ int main(int argc, char *argv[]) {
 }
 
 void ConnectionLoop() {
-	// Connect to remote server
 	int proxy_sock = SetupListen(proxy_server_port);
 	int remote_sock, client_sock;
 	while (1) {

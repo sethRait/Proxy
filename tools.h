@@ -6,6 +6,7 @@ extern int proxy_server_port;
 
 typedef struct {
 	const char * host;
+	int port;
 	int fqdn_length;
 	int irl_offset;
 	int protocol_offset;
@@ -25,14 +26,17 @@ int CheckInput(int argc, char *argv[]);
 //connections.
 int SetupListen(int port);
 
-// Connects a client to the proxy server and returns the client's socket fd
+// Connects a client to the proxy server and returns the client's socket fd.
 int ConnectClient(int s);
 
-// Helper method for finding the offset in the domain string of the filepath
-void GetOffsets(parse_info *parse_struct, const char *s, size_t length);
+// Helper method for finding the offsets in the domain string.
+void SetOffsets(parse_info *parse_struct, const char *s, size_t length);
+
+// Exract the port number from the request string
+void SetPort(parse_info *parse_struct, const char *s, size_t length);
 
 // Connects a remote server to the proxy server and returns the remote server's
-// socket fd
+// socket fd.
 int ConnectRemote(parse_info *info, struct sockaddr_in *sa);
 
 static int message_begin_cb(http_parser *parser) {
@@ -50,7 +54,8 @@ static int message_complete_cb(http_parser *parser) {
 static int url_cb(http_parser *parser, const char *s, size_t length) {
 	parse_info *parse_struct = ((parse_info *)(parser->data));
 	parse_struct->fqdn_length = (int)length;
-	GetOffsets(parse_struct, s, length);
+	SetOffsets(parse_struct, s, length);
+	SetPort(parse_struct, s, length);
 	return 0;
 }
 
