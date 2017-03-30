@@ -47,7 +47,7 @@ int ConnectRemote(parse_info *info, struct sockaddr_in *sa) {
 	struct hostent *h;
 	int s;
 	char *host = malloc(info->irl_offset);
-	strncpy(host, info->domain, info->fqdn_length);
+	strncpy(host, info->host, info->irl_offset - info->protocol_offset);
 	h = gethostbyname(host);
 	if (!h || h->h_length != sizeof(struct in_addr)) {
 		fprintf(stderr, "%s: no such host\n", host);
@@ -109,4 +109,20 @@ int SetupListen(int port) {
 		return -1;
 	}
 	return s;
+}
+
+void GetOffsets(parse_info *parse_struct, const char *s, size_t length) {
+	if (strncmp(s, "https://", 8) == 0) {
+		parse_struct->protocol_offset = 8;
+	}
+	else if(strncmp(s, "http://", 7) ==0) {
+		parse_struct->protocol_offset = 7;
+	}
+	for (int i = parse_struct->protocol_offset; i < length; i++) {
+		if (s[i] == '/') {	// Count the '/' occurrences.
+			parse_struct->irl_offset = i;
+			break;
+		}
+	}
+	parse_struct->host = s + parse_struct->protocol_offset;
 }

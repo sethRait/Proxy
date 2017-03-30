@@ -40,10 +40,10 @@ void ConnectionLoop() {
 int ReadRequest(int client_sock) {
 	char buffer[BUF_LEN] = {'\0'};
 	parse_info parsed;
-	memset(&parsed, 0, sizeof(parse_info));
 	http_parser *parser = malloc(sizeof(http_parser));
+	memset(&parsed, 0, sizeof(parse_info));
 	http_parser_init(parser, HTTP_REQUEST);
-	int nread = read(fds[0].fd, buffer, BUF_LEN - 1);
+	int nread = read(client_sock, buffer, BUF_LEN - 1);
 	parser->data = (void *)&parsed;
 	int nparsed = http_parser_execute(parser, &settings, buffer, nread);
 	struct sockaddr_in sin;

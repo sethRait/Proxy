@@ -1,5 +1,5 @@
 CC=gcc
-HTTP_PARSER = /home/seth/Documents/Systems/project2/Proxy/http-parser
+HTTP_PARSER = http-parser
 CFLAGS= -g -Wall -I$(HTTP_PARSER)
 VPATH = $(HTTP_PARSER)
 
