@@ -129,7 +129,7 @@ void SetOffsets(parse_info *parse_struct, const char *s, size_t length) {
 
 void SetPort(parse_info *parse_struct, const char *s, size_t length) {
 	parse_struct->port = 80;	// Default to port 80 for HTTP.
-	if (parse_struct->protocol_offset = 8) {
+	if (parse_struct->protocol_offset == 8) {
 		parse_struct->port = 443;	// If HTTPS, use 443 unless specified.
 	}
 	for (int i = length; i > length - 6; i--) {
