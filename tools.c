@@ -46,8 +46,8 @@ int ConnectClient(int s) {
 int ConnectRemote(parse_info *info, struct sockaddr_in *sa) {
 	struct hostent *h;
 	int s;
-	char *host = malloc(info->irl_offset);
-	strncpy(host, info->host, info->irl_offset - info->protocol_offset);
+	char *host = malloc(info->host_length);
+	strcpy(host, info->host);
 	h = gethostbyname(host);
 	if (!h || h->h_length != sizeof(struct in_addr)) {
 		fprintf(stderr, "%s: no such host\n", host);
@@ -111,25 +111,39 @@ int SetupListen(int port) {
 	return s;
 }
 
-void SetOffsets(parse_info *parse_struct, const char *s, size_t length) {
+void SetHost(parse_info *parse_struct, const char *s, size_t length) {
 	if (strncmp(s, "https://", 8) == 0) {
-		parse_struct->protocol_offset = 8;
+		parse_struct->protocol = HTTPS;
 	}
 	else if(strncmp(s, "http://", 7) ==0) {
-		parse_struct->protocol_offset = 7;
+		parse_struct->protocol = HTTP;
 	}
-	for (int i = parse_struct->protocol_offset; i < length; i++) {
-		if (s[i] == '/') {	// Count the '/' occurrences.
-			parse_struct->irl_offset = i;
+	for (int i = parse_struct->protocol; i < length; i++) {
+		if (s[i] == '/') {
+			parse_struct->host_length = i - parse_struct->protocol;
 			break;
 		}
 	}
-	parse_struct->host = s + parse_struct->protocol_offset;
+	strncpy(parse_struct->host, s + parse_struct->protocol,
+			parse_struct->host_length);
+}
+
+void SetIrl(parse_info *parse_struct, const char *s, size_t length) {
+	int start = parse_struct->host_length + parse_struct->protocol;
+	int end = start;
+	for (; end < length; end++) {	// TODO: Fix this bug
+		if (isspace(s[end])) {
+			end -= 2;
+			break;
+		}
+	}
+	strncpy(parse_struct->irl, s + start, end);
+	parse_struct->irl_length = end;
 }
 
 void SetPort(parse_info *parse_struct, const char *s, size_t length) {
 	parse_struct->port = 80;	// Default to port 80 for HTTP.
-	if (parse_struct->protocol_offset == 8) {
+	if (parse_struct->protocol == HTTPS) {
 		parse_struct->port = 443;	// If HTTPS, use 443 unless specified.
 	}
 	for (int i = length; i > length - 6; i--) {
@@ -138,4 +152,8 @@ void SetPort(parse_info *parse_struct, const char *s, size_t length) {
 			break;
 		}
 	}
+	printf("Host:%s\n", parse_struct->host);
+	printf("IRL:%s\n", parse_struct->irl);
+	printf("Port: %d\n", parse_struct->port);
+	printf("Protocol: %d\n", parse_struct->protocol);
 }
