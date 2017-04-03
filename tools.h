@@ -15,6 +15,7 @@ typedef struct {
 	enum {NONE = 0, HTTP = 7, HTTPS = 8} protocol;
 	int content_length_exists;
 	int content_length;
+	char request[MAX_FIELD_SIZE];
 }parse_info;
 
 // Makes a socket ready for asynchronous IO.  Returns -1 on error.
@@ -40,6 +41,8 @@ void SetIrl(parse_info *parse_struct, const char *s, size_t length);
 // Exract the port number from the request string
 void SetPort(parse_info *parse_struct, const char *s, size_t length);
 
+void RewriteRequest(parse_info *parse_struct, const char *s, size_t length);
+
 // Connects a remote server to the proxy server and returns the remote server's
 // socket fd.
 int ConnectRemote(parse_info *info, struct sockaddr_in *sa);
@@ -61,6 +64,7 @@ static int url_cb(http_parser *parser, const char *s, size_t length) {
 	SetHost(parse_struct, s, length);
 	SetIrl(parse_struct, s, length);
 	SetPort(parse_struct, s, length);
+	RewriteRequest(parse_struct, s, length);
 	return 0;
 }
 

@@ -111,49 +111,53 @@ int SetupListen(int port) {
 	return s;
 }
 
-void SetHost(parse_info *parse_struct, const char *s, size_t length) {
+void SetHost(parse_info *info, const char *s, size_t length) {
 	if (strncmp(s, "https://", 8) == 0) {
-		parse_struct->protocol = HTTPS;
+		info->protocol = HTTPS;
 	}
 	else if(strncmp(s, "http://", 7) ==0) {
-		parse_struct->protocol = HTTP;
+		info->protocol = HTTP;
 	}
-	for (int i = parse_struct->protocol; i < length; i++) {
+	for (int i = info->protocol; i < length; i++) {
 		if (s[i] == '/') {
-			parse_struct->host_length = i - parse_struct->protocol;
+			info->host_length = i - info->protocol;
 			break;
 		}
 	}
-	strncpy(parse_struct->host, s + parse_struct->protocol,
-			parse_struct->host_length);
+	strncpy(info->host, s + info->protocol, info->host_length);
 }
 
-void SetIrl(parse_info *parse_struct, const char *s, size_t length) {
-	int start = parse_struct->host_length + parse_struct->protocol;
+void SetIrl(parse_info *info, const char *s, size_t length) {
+	int start = info->host_length + info->protocol;
 	int end = start;
-	for (; end < length; end++) {	// TODO: Fix this bug
+	for (; end < length; end++) {
 		if (isspace(s[end])) {
 			end -= 2;
 			break;
 		}
 	}
-	strncpy(parse_struct->irl, s + start, end);
-	parse_struct->irl_length = end;
+	strncpy(info->irl, s + start, end - start);
+	info->irl_length = end;
 }
 
-void SetPort(parse_info *parse_struct, const char *s, size_t length) {
-	parse_struct->port = 80;	// Default to port 80 for HTTP.
-	if (parse_struct->protocol == HTTPS) {
-		parse_struct->port = 443;	// If HTTPS, use 443 unless specified.
+void SetPort(parse_info *info, const char *s, size_t length) {
+	info->port = 80;	// Default to port 80 for HTTP.
+	if (info->protocol == HTTPS) {
+		info->port = 443;	// If HTTPS, use 443 unless specified.
 	}
 	for (int i = length; i > length - 6; i--) {
 		if (s[i] == ':') {
-			parse_struct->port = atoi(&(s[i + 1]));
+			info->port = atoi(&(s[i + 1]));
 			break;
 		}
 	}
-	printf("Host:%s\n", parse_struct->host);
-	printf("IRL:%s\n", parse_struct->irl);
-	printf("Port: %d\n", parse_struct->port);
-	printf("Protocol: %d\n", parse_struct->protocol);
+	printf("Host:%s\n", info->host);
+	printf("IRL:%s\n", info->irl);
+	printf("Port: %d\n", info->port);
+	printf("Protocol: %d\n", info->protocol);
+}
+
+void RewriteRequest(parse_info *info, const char *s, size_t length) {
+	strncpy(info->request, s, length);
+	printf("Request: %s\n", info->request);
 }
