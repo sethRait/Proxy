@@ -154,7 +154,6 @@ void SetPort(parse_info *info, const char *s, size_t length) {
 }
 
 void RewriteRequest(parse_info *info, const char *s, size_t length) {
-	printf("the string is: %s\n", s);
 	int i = 2;
 	for (; i < info->buf_length; i++) {
 		if (isspace(info->buffer[i])) {
@@ -171,10 +170,7 @@ void RewriteRequest(parse_info *info, const char *s, size_t length) {
 	}
 	int cur_offset = i;
 	strcpy(info->request, method);
-	//strncpy(info->request + 4, s, length + 9);
 	strcpy(info->request + cur_offset, info->irl);
 	cur_offset += info->irl_length;
-	printf("offset: %d\n", cur_offset);
 	strcpy(info->request + cur_offset, " HTTP/1.0");
-	printf("Request: %s\n", info->request);
 }

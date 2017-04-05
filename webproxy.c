@@ -60,7 +60,6 @@ void DoTheStuff(int client_sock, char buffer[], http_parser *parser, parse_info 
 		fprintf(stderr, "Error connecting remote server\n");
 		return;
 	}
-	printf("sending: %s\n", parsed->request);
 	int ret = write(remote_sock, parsed->request, nread);
 	HandleConnection(client_sock, remote_sock);
 }
