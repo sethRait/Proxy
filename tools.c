@@ -1,4 +1,4 @@
-#include "webproxy.h"
+//#include "webproxy.h"
 #include "tools.h"
 
 #include <ctype.h>
@@ -48,9 +48,9 @@ int ConnectRemote(parse_info *info, struct sockaddr_in *sa) {
 	int s;
 	char *host = malloc(info->host_length);
 	strcpy(host, info->host);
-	h = gethostbyname(host);
+	h = gethostbyname(info->host);
 	if (!h || h->h_length != sizeof(struct in_addr)) {
-		fprintf(stderr, "%s: no such host\n", host);
+		fprintf(stderr, "%s: no such host\n", info->host);
 		return -1;
 	}
 
@@ -137,7 +137,7 @@ void SetIrl(parse_info *info, const char *s, size_t length) {
 		}
 	}
 	strncpy(info->irl, s + start, end - start);
-	info->irl_length = end;
+	info->irl_length = end - start;
 }
 
 void SetPort(parse_info *info, const char *s, size_t length) {
@@ -151,13 +151,30 @@ void SetPort(parse_info *info, const char *s, size_t length) {
 			break;
 		}
 	}
-	printf("Host:%s\n", info->host);
-	printf("IRL:%s\n", info->irl);
-	printf("Port: %d\n", info->port);
-	printf("Protocol: %d\n", info->protocol);
 }
 
 void RewriteRequest(parse_info *info, const char *s, size_t length) {
-	strncpy(info->request, s, length);
+	printf("the string is: %s\n", s);
+	int i = 2;
+	for (; i < info->buf_length; i++) {
+		if (isspace(info->buffer[i])) {
+			i++;
+			break;
+		}
+	}
+	char *method;
+	if (i == 4) {
+		method = "GET ";
+	}
+	else if (i == 5) {
+		method = "POST ";
+	}
+	int cur_offset = i;
+	strcpy(info->request, method);
+	//strncpy(info->request + 4, s, length + 9);
+	strcpy(info->request + cur_offset, info->irl);
+	cur_offset += info->irl_length;
+	printf("offset: %d\n", cur_offset);
+	strcpy(info->request + cur_offset, " HTTP/1.0");
 	printf("Request: %s\n", info->request);
 }

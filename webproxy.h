@@ -1,3 +1,4 @@
+#include "http_parser.h"
 #include <netinet/in.h>
 #include <poll.h>
 
@@ -12,3 +13,5 @@ void TransferData(struct pollfd *fds, char *to_server, char *to_client);
 
 // Connect incoming connections
 void ConnectionLoop(); 
+
+void DoTheStuff(int client_sock, char buffer[], http_parser *parser, parse_info *parsed);

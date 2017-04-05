@@ -42,17 +42,27 @@ int ReadRequest(int client_sock) {
 	http_parser *parser = malloc(sizeof(http_parser));
 	memset(&parsed, 0, sizeof(parse_info));
 	http_parser_init(parser, HTTP_REQUEST);
-	int nread = read(client_sock, buffer, BUF_LEN - 1);
 	parser->data = (void *)&parsed;
-	int nparsed = http_parser_execute(parser, &settings, buffer, nread);
+	DoTheStuff(client_sock, buffer, parser, &parsed);
+	return 0;
+}
+
+void DoTheStuff(int client_sock, char buffer[], http_parser *parser, parse_info *parsed) {
+	int nread, nparsed;
+	nread = read(client_sock, buffer, BUF_LEN - 1);
+	parsed->buffer = buffer;
+	parsed->buf_length = nread;
+	nparsed = http_parser_execute(parser, &settings, buffer, nread);
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
-	int remote_sock = ConnectRemote(&parsed, &sin);
-	if (remote_sock > 0) {
-		return remote_sock;
+	int remote_sock = ConnectRemote(parsed, &sin);
+	if (remote_sock < 0) {
+		fprintf(stderr, "Error connecting remote server\n");
+		return;
 	}
-	fprintf(stderr, "Error connecting remote server\n");
-	return -1;
+	printf("sending: %s\n", parsed->request);
+	int ret = write(remote_sock, parsed->request, nread);
+	HandleConnection(client_sock, remote_sock);
 }
 
 void HandleConnection(int client, int server) {
@@ -70,20 +80,12 @@ void HandleConnection(int client, int server) {
 void TransferData(struct pollfd *fds, char *to_server, char *to_client) {
 	int serv_count = 0;
 	int client_count = 0;
-	http_parser *parser = malloc(sizeof(http_parser));
-	http_parser_init(parser, HTTP_REQUEST);
 	while(1) {
 		poll(fds, 2, -1);
 		// If there is data to read on the client socket and room in the buffer
 		if (fds[0].revents & POLLIN && serv_count < BUF_LEN - 1) {
 			serv_count += read(fds[0].fd, to_server + serv_count, 
 						 	   BUF_LEN - serv_count - 1);
-			int nparsed = http_parser_execute(parser, &settings, to_server,
-										      serv_count);
-			if (nparsed != serv_count) {
-				fprintf(stderr, "OHNO\n");
-				return;
-			}
 		}
 		// If the client can accept data and there is data to be sent
 		while (fds[0].revents & POLLOUT && client_count > 0) {

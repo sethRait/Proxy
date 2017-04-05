@@ -7,6 +7,8 @@ extern int proxy_server_port;
 #define MAX_FIELD_SIZE 2048
 
 typedef struct {
+	char *buffer;
+	int buf_length;
 	char host[MAX_FIELD_SIZE];
 	size_t host_length;
 	int port;
@@ -37,6 +39,9 @@ void SetHost(parse_info *parse_struct, const char *s, size_t length);
 
 // Extract the IRL from the request string
 void SetIrl(parse_info *parse_struct, const char *s, size_t length);
+
+// Set the request method (GET or POST)
+void SetMethod(parse_struct, s, length);
 
 // Exract the port number from the request string
 void SetPort(parse_info *parse_struct, const char *s, size_t length);
