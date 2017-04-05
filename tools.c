@@ -1,4 +1,3 @@
-//#include "webproxy.h"
 #include "tools.h"
 
 #include <ctype.h>
@@ -168,9 +167,8 @@ void RewriteRequest(parse_info *info, const char *s, size_t length) {
 	else if (i == 5) {
 		method = "POST ";
 	}
-	int cur_offset = i;
 	strcpy(info->request, method);
-	strcpy(info->request + cur_offset, info->irl);
-	cur_offset += info->irl_length;
+	strcpy(info->request + i, info->irl);
+	i += info->irl_length;
 	strcpy(info->request + cur_offset, " HTTP/1.0");
 }

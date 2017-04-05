@@ -3,3 +3,4 @@ webproxy
 *.out
 *.o
 *.h
+*.swp
