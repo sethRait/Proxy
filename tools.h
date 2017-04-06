@@ -8,7 +8,6 @@ extern int proxy_server_port;
 
 typedef struct {
 	char *buffer;
-	char method[5];
 	int buf_length;
 	char host[MAX_FIELD_SIZE];
 	size_t host_length;
@@ -16,8 +15,6 @@ typedef struct {
 	char irl[MAX_FIELD_SIZE];
 	size_t irl_length;
 	enum {NONE = 0, HTTP = 7, HTTPS = 8} protocol;
-	int content_length_exists;
-	int content_length;
 	char request[MAX_FIELD_SIZE];
 }parse_info;
 
