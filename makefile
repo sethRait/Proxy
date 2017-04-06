@@ -1,6 +1,6 @@
 CC=gcc
 HTTP_PARSER = http-parser
-CFLAGS= -g -Wall -I$(HTTP_PARSER)
+CFLAGS= -lpthread -g -Wall -I$(HTTP_PARSER)
 VPATH = $(HTTP_PARSER)
 
 $(HTTP_PARSER)/libhttp_parser.a:

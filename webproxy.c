@@ -3,6 +3,7 @@
 #include "webproxy.h"
 
 #include <errno.h>
+#include <pthread.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h> 
@@ -11,6 +12,7 @@
 #include <unistd.h>
 
 #define BUF_LEN 16384 
+#define BAD_REQUEST "HTTP/1.0 400 Bad Request\r\n\r\n"
 int proxy_server_port;
 
 int main(int argc, char *argv[]) {
@@ -26,9 +28,11 @@ void ConnectionLoop() {
 	int proxy_sock = SetupListen(proxy_server_port);
 	int remote_sock, client_sock;
 	while (1) {
+		parse_info info;
+		memset(&info, 0, sizeof(parse_info));
 		make_async(client_sock);
 		client_sock = ConnectClient(proxy_sock);
-		remote_sock = ReadRequest(client_sock);
+		remote_sock = ReadRequest(client_sock, &info);
 		make_async(remote_sock);
 		HandleConnection(client_sock, remote_sock);
 		close(client_sock);
@@ -36,32 +40,34 @@ void ConnectionLoop() {
 	}
 }
 
-int ReadRequest(int client_sock) {
+int ReadRequest(int client_sock, parse_info *info) {
 	char buffer[BUF_LEN] = {'\0'};
-	parse_info parsed;
 	http_parser *parser = malloc(sizeof(http_parser));
-	memset(&parsed, 0, sizeof(parse_info));
 	http_parser_init(parser, HTTP_REQUEST);
-	parser->data = (void *)&parsed;
-	DoTheStuff(client_sock, buffer, parser, &parsed);
-	return 0;
+	parser->data = (void *)info;
+	int remote_sock = HandleRewrite(client_sock, buffer, parser, info);
+	return remote_sock;
 }
 
-void DoTheStuff(int client_sock, char buffer[], http_parser *parser, parse_info *parsed) {
+int HandleRewrite(int client_sock, char buffer[], http_parser *parser,
+				  parse_info *info) {
 	int nread, nparsed;
 	nread = read(client_sock, buffer, BUF_LEN - 1);
-	parsed->buffer = buffer;
-	parsed->buf_length = nread;
+	info->buffer = buffer;
+	info->buf_length = nread;
 	nparsed = http_parser_execute(parser, &settings, buffer, nread);
+	if (nread != nparsed) {
+		return -1;
+	}
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
-	int remote_sock = ConnectRemote(parsed, &sin);
-	if (remote_sock < 0) {
-		fprintf(stderr, "Error connecting remote server\n");
-		return;
+	int remote_sock = ConnectRemote(info, &sin);
+	if (remote_sock < 0) {	// Bad request
+		write(client_sock, BAD_REQUEST, 28);
+		return -1;
 	}
-	int ret = write(remote_sock, parsed->request, nread);
-	HandleConnection(client_sock, remote_sock);
+	write(remote_sock, info->request, nread);
+	return remote_sock;
 }
 
 void HandleConnection(int client, int server) {

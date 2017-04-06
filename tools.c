@@ -170,5 +170,5 @@ void RewriteRequest(parse_info *info, const char *s, size_t length) {
 	strcpy(info->request, method);
 	strcpy(info->request + i, info->irl);
 	i += info->irl_length;
-	strcpy(info->request + cur_offset, " HTTP/1.0");
+	strcpy(info->request + i, " HTTP/1.0");
 }
