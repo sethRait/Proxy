@@ -33,7 +33,7 @@ void ConnectionLoop() {
 		proxy_info *p_info;
 		p_info = make_proxy_info(client_sock);
 		pthread_t thread;
-		int rc = pthread_create(&thread, NULL, &proxy, p_info);
+		pthread_create(&thread, NULL, &proxy, p_info);
 	}
 }
 

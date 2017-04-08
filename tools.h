@@ -15,8 +15,6 @@ typedef struct {
 	char host[MAX_FIELD_SIZE];
 	size_t host_length;
 	int port;
-	char irl[MAX_FIELD_SIZE];
-	size_t irl_length;
 	enum {NONE = 0, HTTP = 7, HTTPS = 8} protocol;
 	char request[REQUEST_SIZE];
 	int request_length;
@@ -48,30 +46,3 @@ int RewriteRequest(parse_info *parse_struct, const char *s, size_t length);
 // socket fd.
 int ConnectRemote(parse_info *info, struct sockaddr_in *sa);
 
-static int message_begin_cb(http_parser *parser) {
-	printf("message begin\n");
-	return 0;
-}
-
-static int message_complete_cb(http_parser *parser) {
-	printf("message complete\n");
-	return 0;
-}
-
-// Set the url field of the parser struct
-static int url_cb(http_parser *parser, const char *s, size_t length) {
-	parse_info *info = ((parse_info *)(parser->data));
-	SetHost(info, s, length);
-	SetPort(info, s, length);
-	return RewriteRequest(info, s, length);
-}
-
-static http_parser_settings settings = {
-	.on_message_begin = message_begin_cb,
-	.on_header_field = NULL,
-	.on_header_value = NULL,
-	.on_url = url_cb,
-	.on_body = NULL,
-	.on_headers_complete = NULL,
-	.on_message_complete = message_complete_cb
-};
