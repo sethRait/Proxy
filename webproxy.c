@@ -35,6 +35,14 @@ void ConnectionLoop() {
 		remote_sock = ReadRequest(client_sock, &info);
 		make_async(remote_sock);
 		HandleConnection(client_sock, remote_sock);
+		
+		// NEW STUFF FOR THREADS
+		proxy_info p_info;
+		make_proxy_info(client);
+
+
+
+
 		close(client_sock);
 		close(remote_sock);
 	}

@@ -2,6 +2,19 @@
 #include <netinet/in.h>
 #include <poll.h>
 
+typedef struct {
+	int client_sock;
+}proxy_info;
+
+static proxy_info *make_proxy_info(int client_sock) {
+	proxy_info* info = malloc(sizeof(proxy_info));
+	info->client_sock = client_sock;
+	return info;
+}
+static void free_proxy_info(proxy_info *info) {
+	free(info);
+}
+
 // Handle state for the connection and run the proxy loop
 void HandleConnection(int client_sock, int remote_sock);
 
