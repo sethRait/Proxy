@@ -1,7 +1,8 @@
+#include "http_parser.h"
+
 #include <netinet/ip.h>
 #include <stdio.h>
 #include <string.h>
-#include "http_parser.h"
 
 extern int proxy_server_port;
 
@@ -38,9 +39,6 @@ int ConnectClient(int s);
 // Helper method for finding the offsets in the domain string.
 void SetHost(parse_info *parse_struct, const char *s, size_t length);
 
-// Extract the IRL from the request string
-void SetIrl(parse_info *parse_struct, const char *s, size_t length);
-
 // Exract the port number from the request string
 void SetPort(parse_info *parse_struct, const char *s, size_t length);
 
@@ -60,12 +58,10 @@ static int message_complete_cb(http_parser *parser) {
 	return 0;
 }
 
-
 // Set the url field of the parser struct
 static int url_cb(http_parser *parser, const char *s, size_t length) {
 	parse_info *info = ((parse_info *)(parser->data));
 	SetHost(info, s, length);
-	SetIrl(info, s, length);
 	SetPort(info, s, length);
 	return RewriteRequest(info, s, length);
 }

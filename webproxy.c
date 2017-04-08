@@ -26,27 +26,30 @@ int main(int argc, char *argv[]) {
 
 void ConnectionLoop() {
 	int proxy_sock = SetupListen(proxy_server_port);
-	int remote_sock, client_sock;
+	int client_sock;
 	while (1) {
-		parse_info info;
-		memset(&info, 0, sizeof(parse_info));
-		make_async(client_sock);
 		client_sock = ConnectClient(proxy_sock);
-		remote_sock = ReadRequest(client_sock, &info);
-		make_async(remote_sock);
-		HandleConnection(client_sock, remote_sock);
-		
-		// NEW STUFF FOR THREADS
-		proxy_info p_info;
-		make_proxy_info(client);
-
-
-
-
-		close(client_sock);
-		close(remote_sock);
+		make_async(client_sock);
+		proxy_info *p_info;
+		p_info = make_proxy_info(client_sock);
+		pthread_t thread;
+		int rc = pthread_create(&thread, NULL, &proxy, p_info);
 	}
 }
+
+static void *proxy(void *vproxy_info) {
+	proxy_info *p_info = (proxy_info *)vproxy_info;
+	parse_info info;
+	memset(&info, 0, sizeof(parse_info));
+	int remote_sock = ReadRequest(p_info->client_sock, &info);
+	make_async(remote_sock);
+	HandleConnection(p_info->client_sock, remote_sock);
+	close(p_info->client_sock);
+	close(remote_sock);
+	free_proxy_info(p_info);
+	return NULL;
+}
+
 
 int ReadRequest(int client_sock, parse_info *info) {
 	char buffer[BUF_LEN] = {'\0'};
@@ -60,7 +63,15 @@ int ReadRequest(int client_sock, parse_info *info) {
 int HandleRewrite(int client_sock, char buffer[], http_parser *parser,
 				  parse_info *info) {
 	int nread, nparsed;
+	struct pollfd fd[1];
+	memset(fd, 0, sizeof(struct pollfd));
+	fd[0].fd = client_sock;
+	fd[0].events |= POLLIN;
+	poll(fd, 1, -1);
 	nread = read(client_sock, buffer, BUF_LEN - 1);
+	if (nread < 0) {
+		fprintf(stderr, "read error: %d\n", errno);
+	}
 	info->buffer = buffer;
 	info->buf_length = nread;
 	nparsed = http_parser_execute(parser, &settings, buffer, nread);

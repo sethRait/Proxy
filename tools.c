@@ -45,11 +45,12 @@ int ConnectClient(int s) {
 int ConnectRemote(parse_info *info, struct sockaddr_in *sa) {
 	struct hostent *h;
 	int s;
-	char *host = malloc(info->host_length);
+	char *host = malloc(info->host_length + 1);
 	strcpy(host, info->host);
 	h = gethostbyname(info->host);
 	if (!h || h->h_length != sizeof(struct in_addr)) {
 		fprintf(stderr, "%s: no such host\n", info->host);
+		free(host);
 		return -1;
 	}
 
@@ -60,6 +61,7 @@ int ConnectRemote(parse_info *info, struct sockaddr_in *sa) {
 	if (bind(s, (struct sockaddr *)sa, sizeof(*sa)) < 0) {
 		perror("bind");
 		close(s);
+		free(host);
 		return -1;
 	}
 
@@ -71,8 +73,10 @@ int ConnectRemote(parse_info *info, struct sockaddr_in *sa) {
 	if (connect(s, (struct sockaddr *)sa, sizeof(*sa)) < 0) {
 		perror(host);
 		close(s);
+		free(host);
 		return -1;
 	}
+	free(host);
 	return s;
 }
 
@@ -124,19 +128,6 @@ void SetHost(parse_info *info, const char *s, size_t length) {
 		}
 	}
 	strncpy(info->host, s + info->protocol, info->host_length);
-}
-
-void SetIrl(parse_info *info, const char *s, size_t length) {
-	int start = info->host_length + info->protocol;
-	int end = start;
-	for (; end < length; end++) {
-		if (isspace(s[end])) {
-			end -= 2;
-			break;
-		}
-	}
-	strncpy(info->irl, s + start, end - start);
-	info->irl_length = end - start;
 }
 
 void SetPort(parse_info *info, const char *s, size_t length) {
