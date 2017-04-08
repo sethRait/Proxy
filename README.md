@@ -1,5 +1,6 @@
-A simple TCP proxy server written in C. In this implementation, the server accepts only one client at a time and the destination (remote host) needs to be specified at runtime.
+A simple HTTP proxy server written in C.
 
 # Usage
 	make
-	./tcpproxy <host_name> <remote_port> <local_port>
+	make webproxy
+	./webproxy <local_port>
