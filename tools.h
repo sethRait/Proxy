@@ -5,6 +5,7 @@
 extern int proxy_server_port;
 
 #define MAX_FIELD_SIZE 2048
+#define REQUEST_SIZE 16384
 
 typedef struct {
 	char *buffer;
@@ -15,7 +16,7 @@ typedef struct {
 	char irl[MAX_FIELD_SIZE];
 	size_t irl_length;
 	enum {NONE = 0, HTTP = 7, HTTPS = 8} protocol;
-	char request[MAX_FIELD_SIZE];
+	char request[REQUEST_SIZE];
 }parse_info;
 
 // Makes a socket ready for asynchronous IO.  Returns -1 on error.
