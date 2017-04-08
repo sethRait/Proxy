@@ -66,8 +66,10 @@ int HandleRewrite(int client_sock, char buffer[], http_parser *parser,
 		write(client_sock, BAD_REQUEST, 28);
 		return -1;
 	}
-	printf("About to write: %s\n", info->request);
-	write(remote_sock, info->request, nread);
+	memset(buffer, '\0', BUF_LEN);
+	strcpy(buffer, info->request);
+	info->request_length = strlen(info->buffer);
+	write(remote_sock, info->buffer, info->request_length);
 	return remote_sock;
 }
 

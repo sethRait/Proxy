@@ -152,29 +152,30 @@ void SetPort(parse_info *info, const char *s, size_t length) {
 	}
 }
 
-void RewriteRequest(parse_info *info, const char *s, size_t length) {
-	int i = 2;
-	for (; i < info->buf_length; i++) {
-		if (isspace(info->buffer[i])) {
-			i++;
+int RewriteRequest(parse_info *info, const char *s, size_t length) {
+	char *start_location = NULL;
+	char *cur_location = info->request;
+	int method_found = 0;
+	int dot_found = 0;
+	for (int i = 0; i < info->buf_length; i++) {
+		// Copy the method(GET, POST) into the request string.
+		if (isspace(info->buffer[i]) && !method_found) {
+			method_found = 1; 
+			strncpy(cur_location, info->buffer, i + 1);
+			cur_location += i + 1;
+		}
+		// The IRL starts st the first "/" after a "."
+		if (info->buffer[i] == '.') {
+			dot_found = 1;
+		}
+		if (info->buffer[i] == '/' && dot_found) {
+			start_location = &(info->buffer[i]);
 			break;
 		}
 	}
-	char *method;
-	if (i == 4) {
-		method = "GET ";
+	if (start_location == NULL) {
+		return -1;
 	}
-	else if (i == 5) {
-		method = "POST ";
-	}
-	strcpy(info->request, method);
-	strcpy(info->request + i, info->irl);
-	i += info->irl_length;
-	strcpy(info->request + i, " HTTP/1.0\r\n");
-	i += 11;
-	strcpy(info->request + i, "Host: ");
-	i += 6;
-	strcpy(info->request + i, info->host);
-	i += info->host_length;
-	strcpy(info->request + i, "\r\n\r\n");
+	strcpy(cur_location, start_location);
+	return 0;
 }

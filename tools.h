@@ -1,5 +1,6 @@
 #include <netinet/ip.h>
 #include <stdio.h>
+#include <string.h>
 #include "http_parser.h"
 
 extern int proxy_server_port;
@@ -17,6 +18,7 @@ typedef struct {
 	size_t irl_length;
 	enum {NONE = 0, HTTP = 7, HTTPS = 8} protocol;
 	char request[REQUEST_SIZE];
+	int request_length;
 }parse_info;
 
 // Makes a socket ready for asynchronous IO.  Returns -1 on error.
@@ -42,7 +44,7 @@ void SetIrl(parse_info *parse_struct, const char *s, size_t length);
 // Exract the port number from the request string
 void SetPort(parse_info *parse_struct, const char *s, size_t length);
 
-void RewriteRequest(parse_info *parse_struct, const char *s, size_t length);
+int RewriteRequest(parse_info *parse_struct, const char *s, size_t length);
 
 // Connects a remote server to the proxy server and returns the remote server's
 // socket fd.
@@ -61,12 +63,11 @@ static int message_complete_cb(http_parser *parser) {
 
 // Set the url field of the parser struct
 static int url_cb(http_parser *parser, const char *s, size_t length) {
-	parse_info *parse_struct = ((parse_info *)(parser->data));
-	SetHost(parse_struct, s, length);
-	SetIrl(parse_struct, s, length);
-	SetPort(parse_struct, s, length);
-	RewriteRequest(parse_struct, s, length);
-	return 0;
+	parse_info *info = ((parse_info *)(parser->data));
+	SetHost(info, s, length);
+	SetIrl(info, s, length);
+	SetPort(info, s, length);
+	return RewriteRequest(info, s, length);
 }
 
 static http_parser_settings settings = {
