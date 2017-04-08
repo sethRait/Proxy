@@ -18,7 +18,7 @@ typedef struct {
 	enum {NONE = 0, HTTP = 7, HTTPS = 8} protocol;
 	char request[REQUEST_SIZE];
 	int request_length;
-}parse_info;
+} parse_info;
 
 // Makes a socket ready for asynchronous IO.  Returns -1 on error.
 int make_async(int s);

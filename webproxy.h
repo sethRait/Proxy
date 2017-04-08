@@ -6,7 +6,7 @@
 
 typedef struct {
 	int client_sock;
-}proxy_info;
+} proxy_info;
 
 static proxy_info *make_proxy_info(int client_sock) {
 	proxy_info* info = malloc(sizeof(proxy_info));
